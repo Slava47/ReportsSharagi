@@ -328,7 +328,9 @@ def save_mermaid_code(mermaid_code, output_path):
         return None
 
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        dirname = os.path.dirname(os.path.abspath(output_path))
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(mermaid_code)
         return output_path

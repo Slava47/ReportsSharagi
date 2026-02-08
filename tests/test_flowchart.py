@@ -186,9 +186,11 @@ class TestSaveMermaidCode:
             assert "flowchart TD" in content
 
     def test_save_none_returns_none(self):
-        result = save_mermaid_code(None, "/tmp/test.mmd")
-        assert result is None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = save_mermaid_code(None, os.path.join(tmpdir, "test.mmd"))
+            assert result is None
 
     def test_save_empty_returns_none(self):
-        result = save_mermaid_code("", "/tmp/test.mmd")
-        assert result is None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = save_mermaid_code("", os.path.join(tmpdir, "test.mmd"))
+            assert result is None
