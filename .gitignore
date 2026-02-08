@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reports output
+reports/*.docx
+reports/*.pdf
+
+# Temporary files
+*.tmp
+*.log
+
+# Graphviz output
+*.gv
+*.gv.png
+*.gv.pdf
+.pytest_cache/
