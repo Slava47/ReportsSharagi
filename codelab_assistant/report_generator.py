@@ -34,7 +34,7 @@ def _get_lexer(language):
     return lexers.get(language, PythonLexer())
 
 
-def _add_title_page(doc, profile, student_info, analysis):
+def _add_title_page(doc, profile, student_info, analysis, title_overrides=None):
     """Добавляет титульный лист.
 
     Args:
@@ -42,10 +42,16 @@ def _add_title_page(doc, profile, student_info, analysis):
         profile: Профиль преподавателя.
         student_info: Информация о студенте.
         analysis: Результаты анализа кода.
+        title_overrides: Переопределение полей титульной страницы.
     """
     font_name = profile.get("font_name", "Times New Roman")
     font_size = profile.get("font_size", 14)
     title_config = profile.get("title_page", {})
+
+    # Применяем переопределения из CLI/GUI
+    if title_overrides:
+        title_config = dict(title_config)
+        title_config.update(title_overrides)
 
     # Верхняя часть — информация об учебном заведении
     for field in ["university", "faculty", "department"]:
@@ -161,18 +167,23 @@ def _add_purpose_section(doc, profile, analysis):
     run.font.size = Pt(font_size)
 
 
-def _add_flowchart_section(doc, profile, flowchart_path):
+def _add_flowchart_section(doc, profile, flowchart_path, label="", figure_num=1):
     """Добавляет раздел с блок-схемой.
 
     Args:
         doc: Документ docx.
         profile: Профиль преподавателя.
         flowchart_path: Путь к файлу изображения блок-схемы.
+        label: Подпись задания (если есть).
+        figure_num: Номер рисунка.
     """
     font_name = profile.get("font_name", "Times New Roman")
     font_size = profile.get("font_size", 14)
 
-    heading = doc.add_heading("Блок-схема алгоритма", level=1)
+    heading_text = "Блок-схема алгоритма"
+    if label:
+        heading_text += f" — {label}"
+    heading = doc.add_heading(heading_text, level=1)
     for run in heading.runs:
         run.font.name = font_name
 
@@ -180,7 +191,7 @@ def _add_flowchart_section(doc, profile, flowchart_path):
         doc.add_picture(flowchart_path, width=Cm(15))
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.add_run("Рис. 1. Блок-схема алгоритма")
+        run = p.add_run(f"Рис. {figure_num}. Блок-схема алгоритма")
         run.font.name = font_name
         run.font.size = Pt(font_size - 2)
         run.italic = True
@@ -194,20 +205,24 @@ def _add_flowchart_section(doc, profile, flowchart_path):
         run.font.size = Pt(font_size)
 
 
-def _add_listing_section(doc, profile, analysis):
+def _add_listing_section(doc, profile, analysis, label=""):
     """Добавляет раздел с листингом кода.
 
     Args:
         doc: Документ docx.
         profile: Профиль преподавателя.
         analysis: Результаты анализа кода.
+        label: Подпись задания (если есть).
     """
     font_name = profile.get("font_name", "Times New Roman")
     font_size = profile.get("font_size", 14)
     code_font = profile.get("code_font_name", "Courier New")
     code_size = profile.get("code_font_size", 10)
 
-    heading = doc.add_heading("Листинг программы", level=1)
+    heading_text = "Листинг программы"
+    if label:
+        heading_text += f" — {label}"
+    heading = doc.add_heading(heading_text, level=1)
     for run in heading.runs:
         run.font.name = font_name
 
@@ -400,6 +415,8 @@ def generate_report(
     student_info=None,
     profile_name="default",
     output_path=None,
+    title_overrides=None,
+    extra_tasks=None,
 ):
     """Генерирует отчет в формате Word.
 
@@ -410,12 +427,19 @@ def generate_report(
         student_info: Словарь с данными студента (name, group, variant).
         profile_name: Имя профиля преподавателя.
         output_path: Путь для сохранения .docx файла.
+        title_overrides: Переопределение полей титульной страницы
+            (university, faculty, department).
+        extra_tasks: Список дополнительных заданий. Каждый элемент — словарь
+            с ключами 'analysis' и 'flowchart_path'.
 
     Returns:
         Путь к сгенерированному файлу.
     """
     if student_info is None:
         student_info = {"name": "Студент", "group": "", "variant": ""}
+
+    if extra_tasks is None:
+        extra_tasks = []
 
     profile = load_profile(profile_name)
     sections = profile.get("sections", [
@@ -435,16 +459,33 @@ def generate_report(
 
     # Генерируем разделы в указанном порядке
     if "title_page" in sections:
-        _add_title_page(doc, profile, student_info, analysis)
+        _add_title_page(doc, profile, student_info, analysis, title_overrides)
 
     if "purpose" in sections:
         _add_purpose_section(doc, profile, analysis)
 
+    main_label = analysis.get("task_label", "")
+    figure_num = 1
+
     if "flowchart" in sections:
-        _add_flowchart_section(doc, profile, flowchart_path)
+        _add_flowchart_section(doc, profile, flowchart_path, main_label, figure_num)
+        figure_num += 1
 
     if "listing" in sections:
-        _add_listing_section(doc, profile, analysis)
+        _add_listing_section(doc, profile, analysis, main_label)
+
+    # Дополнительные задания
+    for task in extra_tasks:
+        task_analysis = task.get("analysis", {})
+        task_fc = task.get("flowchart_path")
+        task_label = task_analysis.get("task_label", "")
+
+        if "flowchart" in sections:
+            _add_flowchart_section(doc, profile, task_fc, task_label, figure_num)
+            figure_num += 1
+
+        if "listing" in sections:
+            _add_listing_section(doc, profile, task_analysis, task_label)
 
     if "test_results" in sections:
         _add_test_results_section(doc, profile, test_results)

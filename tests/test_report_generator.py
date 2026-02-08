@@ -109,3 +109,46 @@ class TestGenerateReport:
         assert "report_test_program.docx" in result
         # Cleanup
         os.unlink(result)
+
+    def test_generate_with_title_overrides(self):
+        analysis = self._make_analysis()
+        overrides = {
+            "university": "МГУ им. Ломоносова",
+            "faculty": "Факультет ВМК",
+            "department": "Кафедра информатики",
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = os.path.join(tmpdir, "test_report.docx")
+            result = generate_report(
+                analysis=analysis,
+                output_path=output,
+                title_overrides=overrides,
+            )
+            assert os.path.exists(result)
+
+    def test_generate_with_extra_tasks(self):
+        analysis = self._make_analysis()
+        extra_analysis = self._make_analysis()
+        extra_analysis["filename"] = "task2.py"
+        extra_analysis["task_label"] = "Задание 2"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = os.path.join(tmpdir, "test_report.docx")
+            result = generate_report(
+                analysis=analysis,
+                output_path=output,
+                extra_tasks=[
+                    {"analysis": extra_analysis, "flowchart_path": None},
+                ],
+            )
+            assert os.path.exists(result)
+
+    def test_generate_with_task_label(self):
+        analysis = self._make_analysis()
+        analysis["task_label"] = "Задание 1"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = os.path.join(tmpdir, "test_report.docx")
+            result = generate_report(
+                analysis=analysis,
+                output_path=output,
+            )
+            assert os.path.exists(result)

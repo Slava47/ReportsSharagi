@@ -43,6 +43,37 @@ class TestParseArgs:
         args = parse_args(["generate", "test.py"])
         assert args.profile == "default"
 
+    def test_generate_with_university(self):
+        args = parse_args([
+            "generate", "test.py",
+            "--university", "МГУ",
+            "--faculty", "ВМК",
+            "--department", "Информатики",
+        ])
+        assert args.university == "МГУ"
+        assert args.faculty == "ВМК"
+        assert args.department == "Информатики"
+
+    def test_default_university_empty(self):
+        args = parse_args(["generate", "test.py"])
+        assert args.university == ""
+        assert args.faculty == ""
+        assert args.department == ""
+
+    def test_generate_with_extra_files(self):
+        args = parse_args([
+            "generate", "test.py",
+            "--extra-files", "task2.py", "task3.py",
+        ])
+        assert args.extra_files == ["task2.py", "task3.py"]
+
+    def test_generate_with_labels(self):
+        args = parse_args([
+            "generate", "test.py",
+            "--labels", "Задание 1", "Задание 2",
+        ])
+        assert args.labels == ["Задание 1", "Задание 2"]
+
 
 class TestCmdProfiles:
     """Тесты команды profiles."""

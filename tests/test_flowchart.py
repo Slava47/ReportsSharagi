@@ -1,5 +1,8 @@
 """Тесты для модуля генерации блок-схем."""
 
+import os
+import tempfile
+
 import pytest
 
 from codelab_assistant.flowchart import (
@@ -11,6 +14,8 @@ from codelab_assistant.flowchart import (
     _is_io_statement,
     _is_loop,
     _parse_structure,
+    generate_mermaid_code,
+    save_mermaid_code,
 )
 
 
@@ -118,3 +123,72 @@ class TestExtractLabels:
     def test_loop_python(self):
         label = _extract_loop_label("for i in range(10):", "python")
         assert "i in range(10)" in label
+
+
+class TestGenerateMermaidCode:
+    """Тесты генерации Mermaid-кода."""
+
+    def test_simple_python(self):
+        code = "x = int(input())\nprint(x * 2)"
+        mermaid = generate_mermaid_code(code, "python")
+        assert mermaid is not None
+        assert "flowchart TD" in mermaid
+        assert "Начало" in mermaid
+        assert "Конец" in mermaid
+
+    def test_empty_code_returns_none(self):
+        mermaid = generate_mermaid_code("", "python")
+        assert mermaid is None
+
+    def test_mermaid_contains_io_nodes(self):
+        code = "x = input()\nprint(x)"
+        mermaid = generate_mermaid_code(code, "python")
+        assert mermaid is not None
+        assert "Ввод" in mermaid
+        assert "Вывод" in mermaid
+
+    def test_mermaid_contains_edges(self):
+        code = "x = int(input())\nprint(x)"
+        mermaid = generate_mermaid_code(code, "python")
+        assert mermaid is not None
+        assert "-->" in mermaid
+
+    def test_mermaid_with_condition(self):
+        code = "x = 1\nif x > 0:\n    print(x)"
+        mermaid = generate_mermaid_code(code, "python")
+        assert mermaid is not None
+        assert "x > 0" in mermaid
+
+    def test_mermaid_cpp(self):
+        code = '#include <iostream>\nint main() {\n    int x;\n    cin >> x;\n    cout << x;\n    return 0;\n}'
+        mermaid = generate_mermaid_code(code, "cpp")
+        assert mermaid is not None
+        assert "flowchart TD" in mermaid
+
+    def test_mermaid_pascal(self):
+        code = "program test;\nvar x: integer;\nbegin\n  readln(x);\n  writeln(x);\nend."
+        mermaid = generate_mermaid_code(code, "pascal")
+        assert mermaid is not None
+        assert "flowchart TD" in mermaid
+
+
+class TestSaveMermaidCode:
+    """Тесты сохранения Mermaid-кода."""
+
+    def test_save_creates_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "test.mmd")
+            result = save_mermaid_code("flowchart TD\n    n0 --> n1", path)
+            assert result == path
+            assert os.path.exists(path)
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            assert "flowchart TD" in content
+
+    def test_save_none_returns_none(self):
+        result = save_mermaid_code(None, "/tmp/test.mmd")
+        assert result is None
+
+    def test_save_empty_returns_none(self):
+        result = save_mermaid_code("", "/tmp/test.mmd")
+        assert result is None

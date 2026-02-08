@@ -2,6 +2,7 @@
 
 Создает блок-схемы алгоритмов на основе анализа исходного кода
 с использованием библиотеки graphviz.
+Также генерирует код блок-схем в формате Mermaid.
 """
 
 import os
@@ -270,5 +271,66 @@ def generate_flowchart(code, language, output_path=None):
         return rendered
     except graphviz.backend.execute.ExecutableNotFound:
         return None
+    except Exception:
+        return None
+
+
+# Формы Mermaid для типов узлов
+_MERMAID_SHAPES = {
+    "start": ("([", "])"),
+    "end": ("([", "])"),
+    "process": ("[", "]"),
+    "decision": ("{", "}"),
+    "io": ("[/", "/]"),
+}
+
+
+def generate_mermaid_code(code, language):
+    """Генерирует код блок-схемы в формате Mermaid.
+
+    Args:
+        code: Исходный код.
+        language: Язык программирования.
+
+    Returns:
+        Строка с Mermaid-кодом блок-схемы или None, если нечего рисовать.
+    """
+    nodes = _parse_structure(code, language)
+
+    if len(nodes) <= 2:
+        return None
+
+    lines = ["flowchart TD"]
+
+    for i, node in enumerate(nodes):
+        node_id = f"n{i}"
+        label = node["label"].replace('"', "'")
+        open_br, close_br = _MERMAID_SHAPES.get(node["type"], ("[", "]"))
+        lines.append(f"    {node_id}{open_br}\"{label}\"{close_br}")
+
+    for i in range(len(nodes) - 1):
+        lines.append(f"    n{i} --> n{i+1}")
+
+    return "\n".join(lines)
+
+
+def save_mermaid_code(mermaid_code, output_path):
+    """Сохраняет Mermaid-код в файл.
+
+    Args:
+        mermaid_code: Строка с Mermaid-кодом.
+        output_path: Путь к файлу для сохранения.
+
+    Returns:
+        Путь к сохранённому файлу или None при ошибке.
+    """
+    if not mermaid_code:
+        return None
+
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(mermaid_code)
+        return output_path
     except Exception:
         return None
